@@ -1,0 +1,10 @@
+git init
+
+git add -A
+
+git commit -m "first commit"
+
+git push -u -f origin main
+
+
+!zip -r file.zip "/kaggle/working/checkpoint"

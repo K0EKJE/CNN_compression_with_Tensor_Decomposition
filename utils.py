@@ -12,6 +12,8 @@ import torch.nn as nn
 import torch.nn.init as init
 
 
+import collections
+
 def get_mean_and_std(dataset):
     '''Compute the mean and std value of dataset.'''
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True, num_workers=2)
@@ -124,3 +126,20 @@ def format_time(seconds):
     if f == '':
         f = '0ms'
     return f
+
+
+
+
+
+def load_model(model,weight_path):
+    
+    checkpoint = torch.load(weight_path)
+
+    new_odict = collections.OrderedDict()
+
+    for key, value in checkpoint['net'].items():
+        new_key = key.replace("module.", "")
+        new_odict[new_key] = value
+    
+    model.load_state_dict(new_odict)
+    
