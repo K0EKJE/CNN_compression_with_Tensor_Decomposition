@@ -3,50 +3,131 @@ from tensorly.decomposition import parafac, partial_tucker
 import numpy as np
 import torch
 import torch.nn as nn
-from VBMF import VBMF
+from tensor_decomp.VBMF import VBMF
 
-def cp_decomposition_conv_layer(layer, rank):
+from typing import Optional
+from torch import Tensor
+
+class ResidualAdd(nn.Module):
+    def __init__(self, block: nn.Module, shortcut: Optional[nn.Module] = None):
+        super().__init__()
+        self.block = block
+        self.shortcut = shortcut
+        "Res applied"
+        
+    def forward(self, x: Tensor) -> Tensor:
+        res = x
+        
+        x = self.block(x)
+        
+        if self.shortcut:
+            res = self.shortcut(res)
+
+        x += res
+        return x
+
+
+
+def cp_decomposition_conv_layer(layer, rank, res = False):
     """ Gets a conv layer and a target rank, 
         returns a nn.Sequential object with the decomposition """
 
     # Perform CP decomposition on the layer weight tensorly. 
-    last, first, vertical, horizontal = \
-        parafac(layer.weight.data, rank=rank, init='svd')
+    l, f, v, h = parafac(np.asarray(layer.weight.data), rank=rank)[1]
+    l, f, v, h = torch.tensor(l),torch.tensor(f),torch.tensor(v), torch.tensor(h)
+    pointwise_s_to_r_layer = torch.nn.Conv2d(
+            in_channels=f.shape[0], 
+            out_channels=f.shape[1], 
+            kernel_size=1, 
+            stride=1, 
+            padding=0, 
+            dilation=layer.dilation, 
+            bias=False)
 
-    pointwise_s_to_r_layer = torch.nn.Conv2d(in_channels=first.shape[0], \
-            out_channels=first.shape[1], kernel_size=1, stride=1, padding=0, 
-            dilation=layer.dilation, bias=False)
+    depthwise_vertical_layer = torch.nn.Conv2d(
+            in_channels=v.shape[1], 
+            out_channels=v.shape[1], 
+            kernel_size=(v.shape[0], 1),
+            stride=1, padding=(layer.padding[0], 0), 
+            dilation=layer.dilation,
+            groups=v.shape[1], 
+            bias=False)
 
-    depthwise_vertical_layer = torch.nn.Conv2d(in_channels=vertical.shape[1], 
-            out_channels=vertical.shape[1], kernel_size=(vertical.shape[0], 1),
-            stride=1, padding=(layer.padding[0], 0), dilation=layer.dilation,
-            groups=vertical.shape[1], bias=False)
-
-    depthwise_horizontal_layer = \
-        torch.nn.Conv2d(in_channels=horizontal.shape[1], \
-            out_channels=horizontal.shape[1], 
-            kernel_size=(1, horizontal.shape[0]), stride=layer.stride,
+    depthwise_horizontal_layer = torch.nn.Conv2d(
+            in_channels=h.shape[1], 
+            out_channels=h.shape[1], 
+            kernel_size=(1, h.shape[0]), 
+            stride=layer.stride,
             padding=(0, layer.padding[0]), 
-            dilation=layer.dilation, groups=horizontal.shape[1], bias=False)
+            dilation=layer.dilation, 
+            groups=h.shape[1], 
+            bias=False)
 
-    pointwise_r_to_t_layer = torch.nn.Conv2d(in_channels=last.shape[1], \
-            out_channels=last.shape[0], kernel_size=1, stride=1,
-            padding=0, dilation=layer.dilation, bias=True)
-
-    pointwise_r_to_t_layer.bias.data = layer.bias.data
-
-    depthwise_horizontal_layer.weight.data = \
-        torch.transpose(horizontal, 1, 0).unsqueeze(1).unsqueeze(1)
-    depthwise_vertical_layer.weight.data = \
-        torch.transpose(vertical, 1, 0).unsqueeze(1).unsqueeze(-1)
-    pointwise_s_to_r_layer.weight.data = \
-        torch.transpose(first, 1, 0).unsqueeze(-1).unsqueeze(-1)
-    pointwise_r_to_t_layer.weight.data = last.unsqueeze(-1).unsqueeze(-1)
-
-    new_layers = [pointwise_s_to_r_layer, depthwise_vertical_layer, \
-                    depthwise_horizontal_layer, pointwise_r_to_t_layer]
+    pointwise_r_to_t_layer = torch.nn.Conv2d(
+            in_channels=l.shape[1], 
+            out_channels=l.shape[0], 
+            kernel_size=1, 
+            stride=1,
+            padding=0, 
+            dilation=layer.dilation, 
+            bias=True)
     
-    return nn.Sequential(*new_layers)
+    pointwise_r_to_t_layer.bias.data = layer.bias.data
+    depthwise_horizontal_layer.weight.data = torch.transpose(h, 1, 0).unsqueeze(1).unsqueeze(1)
+    depthwise_vertical_layer.weight.data = torch.transpose(v, 1, 0).unsqueeze(1).unsqueeze(-1)
+    pointwise_s_to_r_layer.weight.data = torch.transpose(f, 1, 0).unsqueeze(-1).unsqueeze(-1)
+    pointwise_r_to_t_layer.weight.data = l.unsqueeze(-1).unsqueeze(-1)
+
+    new_layers = [pointwise_s_to_r_layer, depthwise_vertical_layer, 
+                  depthwise_horizontal_layer, pointwise_r_to_t_layer]
+
+    if res:
+      return ResidualAdd(nn.Sequential(*new_layers), shortcut=nn.Conv2d(f.shape[0],l.shape[0], kernel_size=1)) #
+    else: return nn.Sequential(*new_layers)
+
+# def cp_decomposition_conv_layer(layer, rank):
+#     """ Gets a conv layer and a target rank, 
+#         returns a nn.Sequential object with the decomposition """
+
+#     # Perform CP decomposition on the layer weight tensorly. 
+#     last, first, vertical, horizontal = \
+#         parafac(np.asarray(layer.weight.data), rank=rank, init='svd')[1]
+
+#     last, first, vertical, horizontal = torch.tensor(last),torch.tensor(first),torch.tensor(vertical), torch.tensor(horizontal)
+#     pointwise_s_to_r_layer = torch.nn.Conv2d(in_channels=first.shape[0], \
+#             out_channels=first.shape[1], kernel_size=1, stride=1, padding=0, 
+#             dilation=layer.dilation, bias=False)
+
+#     depthwise_vertical_layer = torch.nn.Conv2d(in_channels=vertical.shape[1], 
+#             out_channels=vertical.shape[1], kernel_size=(vertical.shape[0], 1),
+#             stride=1, padding=(layer.padding[0], 0), dilation=layer.dilation,
+#             groups=vertical.shape[1], bias=False)
+
+#     depthwise_horizontal_layer = \
+#         torch.nn.Conv2d(in_channels=horizontal.shape[1], \
+#             out_channels=horizontal.shape[1], 
+#             kernel_size=(1, horizontal.shape[0]), stride=layer.stride,
+#             padding=(0, layer.padding[0]), 
+#             dilation=layer.dilation, groups=horizontal.shape[1], bias=False)
+
+#     pointwise_r_to_t_layer = torch.nn.Conv2d(in_channels=last.shape[1], \
+#             out_channels=last.shape[0], kernel_size=1, stride=1,
+#             padding=0, dilation=layer.dilation, bias=True)
+
+#     pointwise_r_to_t_layer.bias.data = layer.bias.data
+
+#     depthwise_horizontal_layer.weight.data = \
+#         torch.transpose(horizontal, 1, 0).unsqueeze(1).unsqueeze(1)
+#     depthwise_vertical_layer.weight.data = \
+#         torch.transpose(vertical, 1, 0).unsqueeze(1).unsqueeze(-1)
+#     pointwise_s_to_r_layer.weight.data = \
+#         torch.transpose(first, 1, 0).unsqueeze(-1).unsqueeze(-1)
+#     pointwise_r_to_t_layer.weight.data = last.unsqueeze(-1).unsqueeze(-1)
+
+#     new_layers = [pointwise_s_to_r_layer, depthwise_vertical_layer, \
+#                     depthwise_horizontal_layer, pointwise_r_to_t_layer]
+    
+#     return nn.Sequential(*new_layers)
 
 def estimate_ranks(layer):
     """ Unfold the 2 modes of the Tensor the decomposition will 

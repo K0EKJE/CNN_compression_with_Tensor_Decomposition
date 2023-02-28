@@ -6,5 +6,6 @@ git commit -m "first commit"
 
 git push -u -f origin main
 
+To add a all changed files, use the following command: $ git add .
 
 !zip -r file.zip "/kaggle/working/checkpoint"
