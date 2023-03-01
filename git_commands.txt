@@ -2,10 +2,17 @@ git init
 
 git add -A
 
+To add a all changed files, use the following command: $ git add .
+
 git commit -m "first commit"
 
 git push -u -f origin main
 
-To add a all changed files, use the following command: $ git add .
+
+To change repo:
+git remote set-url origin https://github.com/K0EKJE/CNN_compression_with_Tensor_Decomposition.git
+
+To check repo:
+git remote -v
 
 !zip -r file.zip "/kaggle/working/checkpoint"
