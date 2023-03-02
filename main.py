@@ -98,29 +98,30 @@ net = VGG('VGG19')
 # net = SimpleDLA()
 # print(net)
 
-if time_disp:
-  # -------------Get running time for a net-------------------------
-  global_time = None
-  exec_times = []
-  def store_time(self, input, output):
-      global global_time, exec_times
-      exec_times.append(time.time() - global_time)
-      global_time = time.time()
+# if time_disp:
+#   # -------------Get running time for a net-------------------------
+#   global_time = None
+#   exec_times = []
+#   def store_time(self, input, output):
+#       global global_time, exec_times
+#       exec_times.append(time.time() - global_time)
+#       global_time = time.time()
 
-  x = torch.randn(1, 3, 32,32)
+#   x = torch.randn(1, 3, 32,32)
 
-  # Register a hook for each module for computing the time difference
-  for module in net.modules():
-      module.register_forward_hook(store_time)
+#   # Register a hook for each module for computing the time difference
+#   for module in net.modules():
+#       module.register_forward_hook(store_time)
 
-  global_time = time.time()
-  out = net(x)
-  t2 = time.time()
-
-  for module, t in zip(net.modules(), exec_times):
-      print(f"{module.__class__}: {t}")
-  print('='*100)
-  # ---------------------------------------------------------
+#   global_time = time.time()
+#   out = net(x)
+#   t2 = time.time()
+#   print('Layer running time:')
+#   print(exec_times[5])# desired layer
+#   # for module, t in zip(net.modules(), exec_times):
+#   #     print(f"{module.__class__}: {t}")
+#   print('='*100)
+#   # ---------------------------------------------------------
 net = net.cuda()
 
 if device == 'cuda':
@@ -190,6 +191,26 @@ def train(epoch, decompose = False):
       state['train_history']['tot time'].append(tot_time)
       state['train_history']['acc'].append(100.*correct/total)
       torch.save(state, './'+folder_path+'/ckpt.pth')
+
+def test1(epoch, decompose = False): # used to test accuracy without fine tuning
+    global best_acc
+    net.eval()
+    test_loss = 0
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for batch_idx, (inputs, targets) in enumerate(testloader):
+            inputs, targets = inputs.cuda(), targets.cuda()
+            outputs = net(inputs)
+            loss = criterion(outputs, targets)
+
+            test_loss += loss.item()
+            _, predicted = outputs.max(1)
+            total += targets.size(0)
+            correct += predicted.eq(targets).sum().item()
+
+            step_time, tot_time = progress_bar(batch_idx, len(testloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
+                         % (test_loss/(batch_idx+1), 100.*correct/total, correct, total))
 
 def test(epoch, decompose = False):
     global best_acc
@@ -323,28 +344,31 @@ if __name__ == '__main__':
       print("Decomposition Completed.")
       print('='*100)
       if time_disp:
-        #-------------Get running time for a net-------------------------
-        global_time = None
-        exec_times = []
-        def store_time(self, input, output):
-            global global_time, exec_times
-            exec_times.append(time.time() - global_time)
-            global_time = time.time()
+        # #-------------Get running time for a net-------------------------
+        # global_time = None
+        # exec_times = []
+        # def store_time(self, input, output):
+        #     global global_time, exec_times
+        #     exec_times.append(time.time() - global_time)
+        #     global_time = time.time()
 
-        x = torch.randn(1, 3, 32,32)
+        # x = torch.randn(1, 3, 32,32)
 
-        # Register a hook for each module for computing the time difference
-        for module in net.modules():
-            module.register_forward_hook(store_time)
+        # # Register a hook for each module for computing the time difference
+        # for module in net.modules():
+        #     module.register_forward_hook(store_time)
 
-        global_time = time.time()
-        out = net(x)
-        t2 = time.time()
+        # global_time = time.time()
+        # out = net(x)
+        # t2 = time.time()
 
-        for module, t in zip(net.modules(), exec_times):
-            print(f"{module.__class__}: {t}")
-        #---------------------------------------------------------
-      print(''*100)
+        # print('Decomposed layer running time:')
+        # print(''*100)
+        # print(exec_times[5]+exec_times[6]+exec_times[7]+exec_times[8]+exec_times[9])
+        # # for module, t in zip(net.modules(), exec_times):
+        # #     print(f"{module.__class__}: {t}")
+        # #---------------------------------------------------------
+      
       print('-'*100)
       print("==> Building decomposed model..")
       print(net)
@@ -353,10 +377,10 @@ if __name__ == '__main__':
       # Learning rate choice is subjective; the paper mentions about possible gradient problem 
       # It is better to stick with a small value.
       # tried with 0.001 perform worse
-      optimizer = optim.SGD(net.parameters(), lr=0.0001,
+      optimizer = optim.SGD(net.parameters(), lr=0.00001,
                       momentum=0.9, weight_decay=5e-5)
       scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100)
-      for epoch in range(1, fine_tune_epochs):
+      for epoch in range(1, fine_tune_epochs+1):
           train(epoch, decompose = True)
           test(epoch, decompose = True)
           scheduler.step()
