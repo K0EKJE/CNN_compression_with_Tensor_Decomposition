@@ -25,17 +25,28 @@ from config import *
 
 parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
 parser.add_argument("--train", dest="train", action="store_true")
-# parser.add_argument('--lr', default=.01, type=float, help='learning rate')
 parser.add_argument('--resume', '-r', action='store_true',
                     help='resume from checkpoint')
 
 parser.add_argument("--decompose", dest="decompose", action="store_true")
+# the following three only used for decomposition case
+parser.add_argument("--add", dest="add", action="store_true")
 parser.add_argument("--fine_tune", dest="fine_tune", action="store_true")
+parser.add_argument('--lr', default=0.0001, type=float, help='learning rate for \
+fine tuning decomposed model')
+
+
+parser.add_argument("--run_model", dest="run_model", action="store_true")
+
 parser.add_argument("--tucker", dest="tucker", action="store_true", \
     help="Use tucker decomposition. uses cp by default")
+
 parser.set_defaults(train=False)
 parser.set_defaults(decompose=False)
+parser.set_defaults(add=False)
 parser.set_defaults(fine_tune=False)
+parser.set_defaults(run_model=False)
+
 parser.set_defaults(tucker=False)    
 
 
@@ -44,8 +55,6 @@ args = parser.parse_args()
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 best_acc = 0  # best test accuracy
 start_epoch = 0  # start from epoch 0 or last checkpoint epoch
-
-#image_size = 32
 
 # Data
 print('==> Preparing data..')
@@ -77,55 +86,15 @@ classes = ('plane', 'car', 'bird', 'cat', 'deer',
            'dog', 'frog', 'horse', 'ship', 'truck')
 
 # Model
-print('==> Building model..')
+# print('==> Building model..')
 
-# net = AlexNet()
-net = VGG('VGG19')
-# net = CharNet()
-# net = ResNet18()
-# net = PreActResNet18()
-# net = GoogLeNet()
-# net = DenseNet121()
-# net = ResNeXt29_2x64d()
-# net = MobileNet()
-# net = MobileNetV2()
-# net = DPN92()
-# net = ShuffleNetG2()
-# net = SENet18()
-# net = ShuffleNetV2()
-# net = EfficientNetB0()
-# net = RegNetX_200MF()
-# net = SimpleDLA()
-# print(net)
-
-# if time_disp:
-#   # -------------Get running time for a net-------------------------
-#   global_time = None
-#   exec_times = []
-#   def store_time(self, input, output):
-#       global global_time, exec_times
-#       exec_times.append(time.time() - global_time)
-#       global_time = time.time()
-
-#   x = torch.randn(1, 3, 32,32)
-
-#   # Register a hook for each module for computing the time difference
-#   for module in net.modules():
-#       module.register_forward_hook(store_time)
-
-#   global_time = time.time()
-#   out = net(x)
-#   t2 = time.time()
-#   print('Layer running time:')
-#   print(exec_times[5])# desired layer
-#   # for module, t in zip(net.modules(), exec_times):
-#   #     print(f"{module.__class__}: {t}")
-#   print('='*100)
-#   # ---------------------------------------------------------
+if args.add:
+  net = torch.load("/content/decomposed_model")
+else: net = VGG('VGG19')
 net = net.cuda()
+#print(net)
 
 if device == 'cuda':
-    # net = torch.nn.DataParallel(net)
     cudnn.benchmark = True
 
 criterion = nn.CrossEntropyLoss()
@@ -142,6 +111,11 @@ def train(epoch, decompose = False):
     train_loss = 0
     correct = 0
     total = 0
+
+    folder_path = 'checkpoint'    
+    if decompose:
+      folder_path = 'checkpoint_decomp' 
+
     for batch_idx, (inputs, targets) in enumerate(trainloader):
         inputs, targets = inputs.cuda(), targets.cuda()
         optimizer.zero_grad()
@@ -158,10 +132,6 @@ def train(epoch, decompose = False):
         step_time, tot_time = progress_bar(batch_idx, len(trainloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
                      % (train_loss/(batch_idx+1), 100.*correct/total, correct, total))
     
-    folder_path = 'checkpoint'    
-    if decompose:
-      folder_path = 'checkpoint_decomp' 
-
     if not os.path.isdir(folder_path): # delete the checkpoint before running an another instance of decomposition
       os.mkdir(folder_path)
       state = {}
@@ -185,6 +155,7 @@ def train(epoch, decompose = False):
       state['test_history'] = test_history
       torch.save(state, './'+folder_path+'/ckpt.pth')
     else: 
+
       state = torch.load('./'+folder_path+'/ckpt.pth') # for training to resume
       state['train_history']['loss'].append(train_loss/(batch_idx+1))
       state['train_history']['step time'].append(step_time)
@@ -192,7 +163,10 @@ def train(epoch, decompose = False):
       state['train_history']['acc'].append(100.*correct/total)
       torch.save(state, './'+folder_path+'/ckpt.pth')
 
-def test1(epoch, decompose = False): # used to test accuracy without fine tuning
+def test1(epoch): # used to test accuracy without fine tuning
+    '''
+    Run the net to test accuracy on test set
+    '''
     global best_acc
     net.eval()
     test_loss = 0
@@ -210,7 +184,8 @@ def test1(epoch, decompose = False): # used to test accuracy without fine tuning
             correct += predicted.eq(targets).sum().item()
 
             step_time, tot_time = progress_bar(batch_idx, len(testloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
-                         % (test_loss/(batch_idx+1), 100.*correct/total, correct, total))
+                        % (test_loss/(batch_idx+1), 100.*correct/total, correct, total))
+    
 
 def test(epoch, decompose = False):
     global best_acc
@@ -247,14 +222,6 @@ def test(epoch, decompose = False):
     acc = 100.*correct/total
     if acc > best_acc:
         print('Saving..')
-        # state = {
-        #     'net': net.state_dict(),
-        #     'acc': acc,
-        #     'epoch': epoch,
-        # }
-        # if not os.path.isdir('checkpoint'):
-        #     os.mkdir('checkpoint')
-
         state['net'] = net.state_dict()
         state['best_acc'] = acc
         state['epoch'] = epoch
@@ -291,16 +258,17 @@ if __name__ == '__main__':
 
   elif args.decompose:
       #________Used to address formating issue_________
-      checkpoint = torch.load(weight_path)
-      new_odict = collections.OrderedDict()
-      for key, value in checkpoint['net'].items():
-          new_key = key.replace("module.", "")
-          new_odict[new_key] = value
-      
-      net.load_state_dict(new_odict)
+      if not args.add:
+        if len(new_weight_path)>0:
+          checkpoint = torch.load(new_weight_path)
+        else: checkpoint = torch.load(weight_path)
+
+        new_odict = collections.OrderedDict()
+        for key, value in checkpoint['net'].items():
+            new_key = key.replace("module.", "")
+            new_odict[new_key] = value
+        net.load_state_dict(new_odict)
       #----------------------------------------------------
-      # net.load_state_dict(checkpoint['net'])
-      
       net.eval()
       net.cpu()
       N = len(net.features._modules.keys())
@@ -312,17 +280,22 @@ if __name__ == '__main__':
       if res: print("Residual structure enabled")
       else: print("Residual structure disabled")
       print(''*100)
+      count = 0
       for i, key in enumerate(net.features._modules.keys()):
 
           if i >= N - 2:
               break
           if i not in layer_to_decomp:# control which layer to decompose
             continue  
+          
           if isinstance(net.features._modules[key], torch.nn.modules.conv.Conv2d):
+              
               conv_layer = net.features._modules[key]
               if rank == 'auto':
                 rank_ = max(conv_layer.weight.data.numpy().shape)//3
-              else: rank_ = rank
+              else: 
+                rank_ = rank[count]
+                count+=1
 
               print("Decomposing layer " +str(i)+": " +str(net.features._modules[key])+"|| rank = "+ str(rank_))
               
@@ -330,62 +303,46 @@ if __name__ == '__main__':
                   decomposed = tucker_decomposition_conv_layer(conv_layer)
               else:
                 # rank = max(conv_layer.weight.data.numpy().shape)//3
-                decomposed = cp_decomposition_conv_layer(conv_layer, rank_, res)
+                ratio, decomposed = cp_decomposition_conv_layer(conv_layer, rank_, res)
 
 
               net.features._modules[key] = decomposed
           # torch.save(net.state_dict(), './model_data/decomp_weight.pth')
           torch.save(net, "decomposed_model")
-          # Export to TorchScript
-          # if not res: # TorchScript can not read Residual sequence
-          #   model_scripted = torch.jit.script(net) 
-          #   model_scripted.save('model_scripted.pt') 
-
-      print("Decomposition Completed.")
-      print('='*100)
-      if time_disp:
-        # #-------------Get running time for a net-------------------------
-        # global_time = None
-        # exec_times = []
-        # def store_time(self, input, output):
-        #     global global_time, exec_times
-        #     exec_times.append(time.time() - global_time)
-        #     global_time = time.time()
-
-        # x = torch.randn(1, 3, 32,32)
-
-        # # Register a hook for each module for computing the time difference
-        # for module in net.modules():
-        #     module.register_forward_hook(store_time)
-
-        # global_time = time.time()
-        # out = net(x)
-        # t2 = time.time()
-
-        # print('Decomposed layer running time:')
-        # print(''*100)
-        # print(exec_times[5]+exec_times[6]+exec_times[7]+exec_times[8]+exec_times[9])
-        # # for module, t in zip(net.modules(), exec_times):
-        # #     print(f"{module.__class__}: {t}")
-        # #---------------------------------------------------------
+          print("Decomposition of layer "+str(i)+" Completed. Ratio = " + str(ratio))
+          print(''*100)
       
-      print('-'*100)
+      print('='*100)
+      print(''*100)
       print("==> Building decomposed model..")
       print(net)
       print('='*100)
-      net = net.cuda()
-      # Learning rate choice is subjective; the paper mentions about possible gradient problem 
-      # It is better to stick with a small value.
-      # tried with 0.001 perform worse
-      optimizer = optim.SGD(net.parameters(), lr=0.00001,
-                      momentum=0.9, weight_decay=5e-5)
-      scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100)
+      print(''*100)
+      net.cuda()
+      print("Accuracy of new model: ")
+      test1(1)
+
+  elif args.run_model:
+    net = torch.load(model_path)
+    net.eval()
+    net.cuda()
+    print("Default learning rate is: "+str(args.lr))
+    optimizer = optim.SGD(net.parameters(), lr=args.lr,
+                momentum=0.9, weight_decay=5e-5)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100)
+
+    if args.fine_tune:
+      assert not os.path.isdir('checkpoint_decomp')
       for epoch in range(1, fine_tune_epochs+1):
           train(epoch, decompose = True)
           test(epoch, decompose = True)
           scheduler.step()
-
-
+          torch.save(net,"fine_tuned_model")
+    else:
+      print('='*100)
+      print(''*100)
+      print("Accuracy of new model: ")
+      test1(1)
 
     
 
