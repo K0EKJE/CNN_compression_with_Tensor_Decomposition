@@ -7,9 +7,12 @@ The training is completely conducted on google colab on NVIDIA Tesla T4, so if y
 I am still working to implement more decomposition methods including Tucker and Tensor Train decomposition on different models. 
 
 ## Key Takeaways
-- The decomposition can almost perfectly achieve the accuracy of original model when CP decomposition rank equals to largest dimension of that layer
-
-
+- The decomposition methods is proven to be working for large trained CNN models.
+- The decomposition can almost perfectly achieve the accuracy of original model when CP decomposition rank equals to largest dimension of that layer.
+- The accuracy of decomposed model recovers fast after one epoch of fine tuning.
+- The rank and accuracy of decomposed model forms a linear relationship for lower values of rank.
+- It can easily get into gradient problem or local minima so the choice of learning rate must be careful.
+- The accuracy is proportional to recovery ratio.
 
 ## Prerequisites
 - Python 
