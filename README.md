@@ -7,7 +7,7 @@ The training is completely conducted on google colab on NVIDIA Tesla T4, so if y
 I am still working to implement more decomposition methods including Tucker and Tensor Train decomposition on different models. 
 
 ## Key Takeaways
-- 
+- The decomposition can almost perfectly achieve the accuracy of original model when CP decomposition rank equals to largest dimension of that layer
 
 
 
@@ -60,23 +60,20 @@ python main.py --run_model --fine_tune --lr = 0.00001
 ```
 Set ```fine_tune_epochs``` in ```config.py``` to control total epochs for fine tuning. 
 
-## Accuracy
-| Model             | Decomposed Layer | Rank    |Acc(No FT)|Acc(FT) |
-| ----------------- | ------------     | ------- |-------   |--------
-| VGG19             | NA               | NA      |93.11%    |NA      |
-| VGG19             | 2                |  4      |14.71%    |88.75%  |
-| VGG19             | 2                | 16      |63.21%    |92.15%  |
-| VGG19             | 2                | 64      |93.02%    |93.02%  |
-| VGG19             | 2                | 128     |93.04%    |93.13%  |
-
-| VGG19             | 3                | 4       |36.67%    |88.11%  |
-| VGG19             | 3                | 16      |80.74%    |92.04%  |
-| VGG19             | 3                | 64      |92.49%    |92.99%  |
-| VGG19             | 3                | 128     |93.00%    |93.11%  |
-
-
-
-
+## Part of result accuracy
+| Model             | Decomposed Layer | Rank    |Acc(No FT)|Acc(FT) |Param Size |
+| ----------------- | ------------     | ------- |-------   |--------| ----------|
+| VGG19             | NA               | NA      |93.11%    |NA      |36864(Layer2), 73728(layer3)|
+| New1              | 2                | 4       |14.71%    |88.75%  |536|
+| New1              |         2        | 16      |63.21%    |92.15%  |2144|
+| New1              | 2                | 64      |93.02%    |93.02%  |8576|
+| New1              | 2                | 128     |93.04%    |93.13%  |17152|
+| New2              | 3                | 4       |36.67%    |88.11%  |792|
+| New2              | 3                | 16      |80.74%    |92.04%  |3168|
+| New2              | 3                | 64      |92.49%    |92.99%  |12672|
+| New2              | 3                | 128     |93.00%    |93.11%  |25344|
+| New23             | 2,3              | 32,64   |91.46%    |92.75%  |16960|
+| New23             | 2,3              | 64,128  |92.85%    |93.09%  |33920|
 
 
 ## Pretrained weights 
