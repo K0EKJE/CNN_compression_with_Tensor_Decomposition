@@ -35,6 +35,8 @@ def cp_decomposition_conv_layer(layer, rank, res = False):
     # Perform CP decomposition on the layer weight tensorly. 
     l, f, v, h = parafac(np.asarray(layer.weight.data), rank=rank)[1]
     l, f, v, h = torch.tensor(l),torch.tensor(f),torch.tensor(v), torch.tensor(h)
+    appro = tl.cp_to_tensor(parafac(np.asarray(layer.weight.data), rank=rank))
+    ratio = tl.norm(appro)/tl.norm(np.asarray(layer.weight.data))
     pointwise_s_to_r_layer = torch.nn.Conv2d(
             in_channels=f.shape[0], 
             out_channels=f.shape[1], 
@@ -82,8 +84,8 @@ def cp_decomposition_conv_layer(layer, rank, res = False):
                   depthwise_horizontal_layer, pointwise_r_to_t_layer]
 
     if res:
-      return ResidualAdd(nn.Sequential(*new_layers), shortcut=nn.Conv2d(f.shape[0],l.shape[0], kernel_size=1)) #
-    else: return nn.Sequential(*new_layers)
+      return ratio, ResidualAdd(nn.Sequential(*new_layers), shortcut=nn.Conv2d(f.shape[0],l.shape[0], kernel_size=1)) #
+    else: return ratio, nn.Sequential(*new_layers)
 
 
 def estimate_ranks(layer):
