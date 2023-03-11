@@ -1,6 +1,7 @@
 from .vgg import *
 # from .dpn import *
 from .lenet import *
+from .alexnet import *
 # from .senet import *
 # from .pnasnet import *
 # from .densenet import *
