@@ -290,7 +290,7 @@ if __name__ == '__main__':
           if i not in layer_to_decomp:# control which layer to decompose
             continue  
           # net.features._modules
-          print('here')
+
           if isinstance(net.features._modules[key], torch.nn.modules.conv.Conv2d):
               
               conv_layer = net.features._modules[key]
@@ -305,7 +305,7 @@ if __name__ == '__main__':
               print("Decomposing layer " +str(i)+": " +str(net.features._modules[key])+"|| rank = "+ str(rank_))
               
               if args.tucker:
-                  decomposed = tucker_decomposition_conv_layer(conv_layer)
+                ratio, decomposed = tucker_decomposition_conv_layer(conv_layer)
               else:
                 # rank = max(conv_layer.weight.data.numpy().shape)//3
                 ratio, decomposed = cp_decomposition_conv_layer(conv_layer, rank_, res)
