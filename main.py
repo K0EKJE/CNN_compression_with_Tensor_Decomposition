@@ -90,9 +90,10 @@ classes = ('plane', 'car', 'bird', 'cat', 'deer',
 
 if args.add:
   net = torch.load("/content/decomposed_model")
-else: net = VGG('VGG19')
+else: net = model
 net = net.cuda()
-#print(net)
+print(net)
+print("Layers: ", net._modules.keys())
 
 if device == 'cuda':
     cudnn.benchmark = True
@@ -259,6 +260,7 @@ if __name__ == '__main__':
   elif args.decompose:
       #________Used to address formating issue_________
       if not args.add:
+
         if len(new_weight_path)>0:
           checkpoint = torch.load(new_weight_path)
         else: checkpoint = torch.load(weight_path)
@@ -282,17 +284,20 @@ if __name__ == '__main__':
       print(''*100)
       count = 0
       for i, key in enumerate(net.features._modules.keys()):
-
           if i >= N - 2:
               break
+
           if i not in layer_to_decomp:# control which layer to decompose
             continue  
-          
+          # net.features._modules
+          print('here')
           if isinstance(net.features._modules[key], torch.nn.modules.conv.Conv2d):
               
               conv_layer = net.features._modules[key]
               if rank == 'auto':
                 rank_ = max(conv_layer.weight.data.numpy().shape)//3
+              elif rank == 'full':
+                rank_ = max(conv_layer.weight.data.numpy().shape)
               else: 
                 rank_ = rank[count]
                 count+=1
@@ -311,6 +316,7 @@ if __name__ == '__main__':
           torch.save(net, "decomposed_model")
           print("Decomposition of layer "+str(i)+" Completed. Ratio = " + str(ratio))
           print(''*100)
+
       
       print('='*100)
       print(''*100)
@@ -324,9 +330,10 @@ if __name__ == '__main__':
 
   elif args.run_model:
     net = torch.load(model_path)
+    print(net)
     net.eval()
     net.cuda()
-    print("Default learning rate is: "+str(args.lr))
+    print("Current learning rate is: "+str(args.lr))
     optimizer = optim.SGD(net.parameters(), lr=args.lr,
                 momentum=0.9, weight_decay=5e-5)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100)
