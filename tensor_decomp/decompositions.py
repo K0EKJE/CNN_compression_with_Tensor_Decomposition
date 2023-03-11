@@ -94,8 +94,8 @@ def estimate_ranks(layer):
     """
 
     weights = layer.weight.data
-    unfold_0 = tl.base.unfold(weights, 0) 
-    unfold_1 = tl.base.unfold(weights, 1)
+    unfold_0 = tl.base.unfold(np.asarray(weights), 0) 
+    unfold_1 = tl.base.unfold(np.asarray(weights), 1)
     _, diag_0, _, _ = VBMF.EVBMF(unfold_0)
     _, diag_1, _, _ = VBMF.EVBMF(unfold_1)
     ranks = [diag_0.shape[0], diag_1.shape[1]]
@@ -107,12 +107,16 @@ def tucker_decomposition_conv_layer(layer):
         The ranks are estimated with a Python implementation of VBMF
         https://github.com/CasvandenBogaard/VBMF
     """
-
+    
     ranks = estimate_ranks(layer)
-    print(layer, "VBMF Estimated ranks", ranks)
+    print("VBMF Estimated ranks: ", ranks)
     core, [last, first] = \
-        partial_tucker(layer.weight.data, \
-            modes=[0, 1], rank=ranks, init='svd')
+        partial_tucker(np.asarray(layer.weight.data), \
+            modes=[0, 1], rank=ranks, init='svd')[0]
+    core, last, first = torch.tensor(core),torch.tensor(last),torch.tensor(first)
+    appro = tl.tucker_tensor.tucker_to_tensor(partial_tucker(np.asarray(layer.weight.data),\
+            modes=[0, 1], rank=ranks, init='svd')[0])
+    ratio = tl.norm(appro)/tl.norm(np.asarray(layer.weight.data))
 
     # A pointwise convolution that reduces the channels from S to R3
     first_layer = torch.nn.Conv2d(in_channels=first.shape[0], \
@@ -139,4 +143,4 @@ def tucker_decomposition_conv_layer(layer):
     core_layer.weight.data = core
 
     new_layers = [first_layer, core_layer, last_layer]
-    return nn.Sequential(*new_layers)
+    return ratio, nn.Sequential(*new_layers)
