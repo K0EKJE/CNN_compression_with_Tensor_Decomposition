@@ -88,28 +88,49 @@ def cp_decomposition_conv_layer(layer, rank, res = False):
     else: return ratio, nn.Sequential(*new_layers)
 
 
-def estimate_ranks(layer):
+def estimate_ranks(layer, method):
     """ Unfold the 2 modes of the Tensor the decomposition will 
     be performed on, and estimates the ranks of the matrices using VBMF 
     """
 
     weights = layer.weight.data
+    
     unfold_0 = tl.base.unfold(np.asarray(weights), 0) 
     unfold_1 = tl.base.unfold(np.asarray(weights), 1)
-    _, diag_0, _, _ = VBMF.EVBMF(unfold_0)
-    _, diag_1, _, _ = VBMF.EVBMF(unfold_1)
-    ranks = [diag_0.shape[0], diag_1.shape[1]]
+    if method == 'VBMF':
+      _, diag_0, _, _ = VBMF.EVBMF(unfold_0)
+      _, diag_1, _, _ = VBMF.EVBMF(unfold_1)
+      ranks = [diag_0.shape[0], diag_1.shape[1]]
+ 
+    if method == 'SVD':
+
+      U, S, V = torch.svd(torch.tensor(unfold_0))
+      U1, S1, V1 = torch.svd(torch.tensor(unfold_1))
+      rank0 = (S > .5).sum().item()
+      rank1 = (S1 >.5).sum().item()
+      ranks = [rank0, rank1]
+    if method == 'QR':
+      # compute the QR decomposition
+      
+      Q, R = torch.linalg.qr(torch.tensor(unfold_0))
+      Q1, R1 = torch.linalg.qr(torch.tensor(unfold_1))
+      # compute the rank of the matrix
+      rank0 = (torch.abs(torch.diag(R)) > .05).sum().item()
+      rank1 = (torch.abs(torch.diag(R1)) > .05).sum().item()
+      ranks = [rank0, rank1]
+    
+
     return ranks
 
-def tucker_decomposition_conv_layer(layer):
+
+def tucker_decomposition_conv_layer(layer, method):
     """ Gets a conv layer, 
         returns a nn.Sequential object with the Tucker decomposition.
         The ranks are estimated with a Python implementation of VBMF
         https://github.com/CasvandenBogaard/VBMF
     """
-    
-    ranks = estimate_ranks(layer)
-    print("VBMF Estimated ranks: ", ranks)
+    ranks = estimate_ranks(layer, method)
+    print(method+" Estimated ranks: ", ranks)
     core, [last, first] = \
         partial_tucker(np.asarray(layer.weight.data), \
             modes=[0, 1], rank=ranks, init='svd')[0]
