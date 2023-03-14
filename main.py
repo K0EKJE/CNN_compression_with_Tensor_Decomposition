@@ -92,8 +92,8 @@ if args.add:
   net = torch.load("/content/decomposed_model")
 else: net = model
 net = net.cuda()
-print(net)
-print("Layers: ", net._modules.keys())
+# print(net)
+# print("Layers: ", net._modules.keys())
 
 if device == 'cuda':
     cudnn.benchmark = True
@@ -294,19 +294,21 @@ if __name__ == '__main__':
           if isinstance(net.features._modules[key], torch.nn.modules.conv.Conv2d):
               
               conv_layer = net.features._modules[key]
-              if rank == 'auto':
-                rank_ = max(conv_layer.weight.data.numpy().shape)//3
-              elif rank == 'full':
-                rank_ = max(conv_layer.weight.data.numpy().shape)
-              else: 
-                rank_ = rank[count]
-                count+=1
 
-              print("Decomposing layer " +str(i)+": " +str(net.features._modules[key])+"|| rank = "+ str(rank_))
+
+              print("Decomposing layer " +str(i)+": " +str(net.features._modules[key]))
               
               if args.tucker:
-                ratio, decomposed = tucker_decomposition_conv_layer(conv_layer)
+                ratio, decomposed = tucker_decomposition_conv_layer(conv_layer, tucker_rank_selection_method)
               else:
+                if rank == 'auto':
+                  rank_ = max(conv_layer.weight.data.numpy().shape)//3
+                elif rank == 'full':
+                  rank_ = max(conv_layer.weight.data.numpy().shape)
+                else: 
+                  rank_ = rank[count]
+                  count+=1
+                print("CP rank = "+ str(rank_))
                 # rank = max(conv_layer.weight.data.numpy().shape)//3
                 ratio, decomposed = cp_decomposition_conv_layer(conv_layer, rank_, res)
 
@@ -344,7 +346,7 @@ if __name__ == '__main__':
           train(epoch, decompose = True)
           test(epoch, decompose = True)
           scheduler.step()
-          torch.save(net,"fine_tuned_model")
+          #torch.save(net,"fine_tuned_model")
     else:
       print('='*100)
       print(''*100)
