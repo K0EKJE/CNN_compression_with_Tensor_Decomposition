@@ -138,7 +138,7 @@ def cp_decomposition_conv_layer(layer, rank, res = False):
     else: return ratio, nn.Sequential(*new_layers)
 
 
-def estimate_ranks(layer, method,threshold):
+def estimate_ranks(layer, method,**args):
     """ Unfold the 2 modes of the Tensor the decomposition will 
     be performed on, and estimates the ranks of the matrices using VBMF 
     """
@@ -190,23 +190,32 @@ def tucker_decomposition_conv_layer(layer, method):
         returns a nn.Sequential object with the Tucker decomposition.
 
     """
-    threshold = 0.5
-    ratio = 0 
-    step_size = 0.025
-    while(ratio<0.8):
-      ranks = estimate_ranks(layer, method, threshold)
-      while ranks[0]<1 or ranks[1]<1:
-        ranks = estimate_ranks(layer, method, threshold)
+    if method =='SVD':
+      threshold = 0.5
+      ratio = 0 
+      step_size = 0.025
+      while(ratio<0.8):
+        ranks = estimate_ranks(layer, method, threshold=threshold)
+        while ranks[0]<1 or ranks[1]<1:
+          ranks = estimate_ranks(layer, method, threshold)
+          threshold -= step_size
+        core, [last, first] = \
+            partial_tucker(np.asarray(layer.weight.data), \
+                modes=[0, 1], rank=ranks, init='svd')[0]
+        core, last, first = torch.tensor(core),torch.tensor(last),torch.tensor(first)
+        appro = tl.tucker_tensor.tucker_to_tensor(partial_tucker(np.asarray(layer.weight.data),\
+                modes=[0, 1], rank=ranks, init='svd')[0])
+        ratio = tl.norm(appro)/tl.norm(np.asarray(layer.weight.data))
         threshold -= step_size
+    else:
+      ranks = estimate_ranks(layer, method)
       core, [last, first] = \
-          partial_tucker(np.asarray(layer.weight.data), \
+              partial_tucker(np.asarray(layer.weight.data), \
               modes=[0, 1], rank=ranks, init='svd')[0]
       core, last, first = torch.tensor(core),torch.tensor(last),torch.tensor(first)
       appro = tl.tucker_tensor.tucker_to_tensor(partial_tucker(np.asarray(layer.weight.data),\
               modes=[0, 1], rank=ranks, init='svd')[0])
       ratio = tl.norm(appro)/tl.norm(np.asarray(layer.weight.data))
-      threshold -= step_size
-
     print(method+" Estimated ranks: ", ranks)
     # A pointwise convolution that reduces the channels from S to R3
     first_layer = torch.nn.Conv2d(in_channels=first.shape[0], \
