@@ -27,6 +27,9 @@ parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
 parser.add_argument("--train", dest="train", action="store_true")
 parser.add_argument('--resume', '-r', action='store_true',
                     help='resume from checkpoint')
+parser.add_argument('--resume_d', action='store_true',
+                    help='resume from decomposed checkpoint')
+
 
 parser.add_argument("--decompose", dest="decompose", action="store_true")
 # the following three only used for decomposition case
@@ -100,7 +103,7 @@ if device == 'cuda':
 
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(net.parameters(), lr=learning_rate,
-                      momentum=momentum, weight_decay=5e-4)
+                      momentum=0.9, weight_decay=5e-4)
 
 scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
 
@@ -282,13 +285,16 @@ if __name__ == '__main__':
       if res: print("Residual structure enabled")
       else: print("Residual structure disabled")
       print(''*100)
-      count = 0
+      if args.tucker:
+        count = 0
+        count_d = 0
       for i, key in enumerate(net.features._modules.keys()):
           if i >= N - 2:
               break
-
-          if i not in layer_to_decomp:# control which layer to decompose
-            continue  
+          if i == 0: continue #ignore first input convolution layer
+          if layer_to_decomp != 'all':
+            if i not in layer_to_decomp:# control which layer to decompose
+              continue  
           # net.features._modules
 
           if isinstance(net.features._modules[key], torch.nn.modules.conv.Conv2d):
@@ -299,7 +305,11 @@ if __name__ == '__main__':
               print("Decomposing layer " +str(i)+": " +str(net.features._modules[key]))
               
               if args.tucker:
-                ratio, decomposed = tucker_decomposition_conv_layer(conv_layer, tucker_rank_selection_method)
+                nparam, npd,ratio, decomposed = tucker_decomposition_conv_layer(conv_layer, tucker_rank_selection_method)
+                count+=nparam
+                count_d+=npd
+                print("Number of params before: "+str(nparam)+" || after: "+str(npd))
+              
               else:
                 if rank == 'auto':
                   rank_ = max(conv_layer.weight.data.numpy().shape)//3
@@ -314,11 +324,12 @@ if __name__ == '__main__':
 
 
               net.features._modules[key] = decomposed
-          # torch.save(net.state_dict(), './model_data/decomp_weight.pth')
-          torch.save(net, "decomposed_model")
-          print("Decomposition of layer "+str(i)+" Completed. Ratio = " + str(ratio))
-          print(''*100)
-
+              # torch.save(net.state_dict(), './model_data/decomp_weight.pth')
+              torch.save(net, "decomposed_model")
+          
+              print("Decomposition of layer "+str(i)+" Completed. Ratio = " + str(ratio))
+              print(''*100)
+      if count>0: print("Total param reduction: "+str(count)+" ==> "+str(count_d)+"(X"+str(round(count/count_d,2))+")")
       
       print('='*100)
       print(''*100)
@@ -335,18 +346,32 @@ if __name__ == '__main__':
     print(net)
     net.eval()
     net.cuda()
-    print("Current learning rate is: "+str(args.lr))
+    print("Starting learning rate is: "+str(args.lr))
     optimizer = optim.SGD(net.parameters(), lr=args.lr,
                 momentum=0.9, weight_decay=5e-5)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100)
-
+    #scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer,step_size=5, gamma=0.1, T_max=100)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.1)
     if args.fine_tune:
-      assert not os.path.isdir('checkpoint_decomp')
-      for epoch in range(1, fine_tune_epochs+1):
-          train(epoch, decompose = True)
-          test(epoch, decompose = True)
-          scheduler.step()
-          #torch.save(net,"fine_tuned_model")
+      if args.resume_d:
+        # Load checkpoint.
+        print('==> Resuming from checkpoint..')
+        assert os.path.isdir('checkpoint_decomp'), 'Error: no checkpoint directory found!'
+        checkpoint = torch.load('/content/checkpoint_decomp/ckpt.pth')
+        net.load_state_dict(checkpoint['net'])
+        best_acc = checkpoint['best_acc']
+        start_epoch = checkpoint['epoch']
+        for epoch in range(start_epoch, start_epoch+5):
+            train(epoch, decompose = True)
+            test(epoch, decompose = True)
+            scheduler.step() 
+      else:
+        assert not os.path.isdir('checkpoint_decomp')
+        for epoch in range(1, fine_tune_epochs+1):
+            train(epoch, decompose = True)
+            test(epoch, decompose = True)
+            scheduler.step()
+            #torch.save(net,"fine_tuned_model")
+
     else:
       print('='*100)
       print(''*100)
