@@ -26,6 +26,56 @@ class ResidualAdd(nn.Module):
         x += res
         return x
 
+def get_param(in_c, out, rank):
+  # define the input and output channels, filter size, and stride
+  in_channels = in_c
+  out_channels = rank[1]
+  kernel_size = 1
+  stride = 1
+
+  # create a convolutional layer
+  conv_layer = torch.nn.Conv2d(in_channels, out_channels, kernel_size, stride)
+
+  # count the number of parameters
+  num_params1 = sum(p.numel() for p in conv_layer.parameters())
+
+  # define the input and output channels, filter size, and stride
+  in_channels = rank[1]
+  out_channels = rank[0]
+  kernel_size = 3
+  stride = 1
+  padding = 1
+  # create a convolutional layer
+  conv_layer = torch.nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding)
+
+  # count the number of parameters
+  num_params2 = sum(p.numel() for p in conv_layer.parameters())
+
+  # define the input and output channels, filter size, and stride
+  in_channels = rank[0]
+  out_channels = out
+  kernel_size = 1
+  stride = 1
+
+  # create a convolutional layer
+  conv_layer = torch.nn.Conv2d(in_channels, out_channels, kernel_size, stride)
+
+  # count the number of parameters
+  num_params3 = sum(p.numel() for p in conv_layer.parameters())
+
+  in_channels = in_c
+  out_channels = out
+  kernel_size = 3
+  stride = 1
+
+  # create a convolutional layer
+  conv_layer = torch.nn.Conv2d(in_channels, out_channels, kernel_size, stride)
+
+  # count the number of parameters
+  num_params = sum(p.numel() for p in conv_layer.parameters())
+
+  return num_params, num_params1+num_params2+num_params3
+
 
 
 def cp_decomposition_conv_layer(layer, rank, res = False):
@@ -88,7 +138,7 @@ def cp_decomposition_conv_layer(layer, rank, res = False):
     else: return ratio, nn.Sequential(*new_layers)
 
 
-def estimate_ranks(layer, method):
+def estimate_ranks(layer, method,threshold):
     """ Unfold the 2 modes of the Tensor the decomposition will 
     be performed on, and estimates the ranks of the matrices using VBMF 
     """
@@ -103,20 +153,32 @@ def estimate_ranks(layer, method):
       ranks = [diag_0.shape[0], diag_1.shape[1]]
  
     if method == 'SVD':
-
       U, S, V = torch.svd(torch.tensor(unfold_0))
       U1, S1, V1 = torch.svd(torch.tensor(unfold_1))
-      rank0 = (S > .5).sum().item()
-      rank1 = (S1 >.5).sum().item()
+      rank0 = (S > threshold).sum().item()
+      rank1 = (S1 >threshold).sum().item()
+      # min_rank = max(torch.tensor(unfold_0).shape[0]//10,torch.tensor(unfold_1).shape[0]//10)
+      # while (rank0<min_rank) or (rank1<min_rank):
+      #   threshold-=0.05
+      #   rank0 = (S > threshold).sum().item()
+      #   rank1 = (S1 > threshold).sum().item()
+      # print("Threshold = ", threshold)
       ranks = [rank0, rank1]
+
     if method == 'QR':
       # compute the QR decomposition
-      
+      threshold=.1
       Q, R = torch.linalg.qr(torch.tensor(unfold_0))
       Q1, R1 = torch.linalg.qr(torch.tensor(unfold_1))
       # compute the rank of the matrix
-      rank0 = (torch.abs(torch.diag(R)) > .05).sum().item()
-      rank1 = (torch.abs(torch.diag(R1)) > .05).sum().item()
+      rank0 = (torch.abs(torch.diag(R)) > threshold).sum().item()
+      rank1 = (torch.abs(torch.diag(R1)) > threshold).sum().item()
+      min_rank = max(torch.tensor(unfold_0).shape[0]//10,torch.tensor(unfold_1).shape[0]//10)
+      while (rank0<min_rank) or (rank1<min_rank):
+        threshold-=0.01
+        rank0 = (torch.abs(torch.diag(R)) > threshold).sum().item()
+        rank1 = (torch.abs(torch.diag(R1)) > threshold).sum().item()
+      print("Threshold = ", threshold, torch.tensor(unfold_0).shape[0])
       ranks = [rank0, rank1]
     
 
@@ -126,19 +188,26 @@ def estimate_ranks(layer, method):
 def tucker_decomposition_conv_layer(layer, method):
     """ Gets a conv layer, 
         returns a nn.Sequential object with the Tucker decomposition.
-        The ranks are estimated with a Python implementation of VBMF
-        https://github.com/CasvandenBogaard/VBMF
-    """
-    ranks = estimate_ranks(layer, method)
-    print(method+" Estimated ranks: ", ranks)
-    core, [last, first] = \
-        partial_tucker(np.asarray(layer.weight.data), \
-            modes=[0, 1], rank=ranks, init='svd')[0]
-    core, last, first = torch.tensor(core),torch.tensor(last),torch.tensor(first)
-    appro = tl.tucker_tensor.tucker_to_tensor(partial_tucker(np.asarray(layer.weight.data),\
-            modes=[0, 1], rank=ranks, init='svd')[0])
-    ratio = tl.norm(appro)/tl.norm(np.asarray(layer.weight.data))
 
+    """
+    threshold = 0.5
+    ratio = 0 
+    step_size = 0.025
+    while(ratio<0.8):
+      ranks = estimate_ranks(layer, method, threshold)
+      while ranks[0]<1 or ranks[1]<1:
+        ranks = estimate_ranks(layer, method, threshold)
+        threshold -= step_size
+      core, [last, first] = \
+          partial_tucker(np.asarray(layer.weight.data), \
+              modes=[0, 1], rank=ranks, init='svd')[0]
+      core, last, first = torch.tensor(core),torch.tensor(last),torch.tensor(first)
+      appro = tl.tucker_tensor.tucker_to_tensor(partial_tucker(np.asarray(layer.weight.data),\
+              modes=[0, 1], rank=ranks, init='svd')[0])
+      ratio = tl.norm(appro)/tl.norm(np.asarray(layer.weight.data))
+      threshold -= step_size
+
+    print(method+" Estimated ranks: ", ranks)
     # A pointwise convolution that reduces the channels from S to R3
     first_layer = torch.nn.Conv2d(in_channels=first.shape[0], \
             out_channels=first.shape[1], kernel_size=1,
@@ -163,5 +232,9 @@ def tucker_decomposition_conv_layer(layer, method):
     last_layer.weight.data = last.unsqueeze(-1).unsqueeze(-1)
     core_layer.weight.data = core
 
+    num_param, num_param_decomp = get_param(first.shape[0],last.shape[0],ranks)
+
+
+
     new_layers = [first_layer, core_layer, last_layer]
-    return ratio, nn.Sequential(*new_layers)
+    return num_param, num_param_decomp, ratio, nn.Sequential(*new_layers)
