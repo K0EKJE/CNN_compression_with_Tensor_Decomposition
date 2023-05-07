@@ -305,7 +305,7 @@ if __name__ == '__main__':
               print("Decomposing layer " +str(i)+": " +str(net.features._modules[key]))
               
               if args.tucker:
-                nparam, npd,ratio, decomposed = tucker_decomposition_conv_layer(conv_layer, tucker_rank_selection_method)
+                nparam, npd,ratio, decomposed = tucker_decomposition_conv_layer(conv_layer, tucker_rank_selection_method, target_ratio_)
                 count+=nparam
                 count_d+=npd
                 print("Number of params before: "+str(nparam)+" || after: "+str(npd))
