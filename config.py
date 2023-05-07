@@ -3,6 +3,7 @@ from models import *
 model = VGG('VGG19')
 # Params for training
 learning_rate = 0.001
+target_ratio_ = 0.79
 
 new_weight_path = "/content/CNN_compression_with_Tensor_Decomposition/trained_weights/VGG19_240iter_ckpt.pth"
 # new_weight_path = "/content/checkpoint/ckpt.pth" 
