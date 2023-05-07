@@ -204,14 +204,14 @@ def estimate_threshold(layer):
 
     return S
 
-def tucker_decomposition_conv_layer(layer, method):
+def tucker_decomposition_conv_layer(layer, method, target_ratio_):
     """ Gets a conv layer, 
         returns a nn.Sequential object with the Tucker decomposition.
 
     """
     if method =='SVD':
       ratio = 0 
-      target_ratio = 0.6
+      target_ratio = target_ratio_
       # threshold, step_size = estimate_threshold(layer)
       #print("=== ", threshold, step_size)
       # while(ratio<target_ratio):
