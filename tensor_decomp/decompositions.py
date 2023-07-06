@@ -138,7 +138,7 @@ def cp_decomposition_conv_layer(layer, rank, res = False):
     else: return ratio, nn.Sequential(*new_layers)
 
 
-def estimate_ranks(layer, method,threshold):
+def estimate_ranks(layer, method, threshold):
     """ Unfold the 2 modes of the Tensor the decomposition will 
     be performed on, and estimates the ranks of the matrices using VBMF 
     """
@@ -147,22 +147,21 @@ def estimate_ranks(layer, method,threshold):
     
     unfold_0 = tl.base.unfold(np.asarray(weights), 0) 
     unfold_1 = tl.base.unfold(np.asarray(weights), 1)
+
+    
+
     if method == 'VBMF':
       _, diag_0, _, _ = VBMF.EVBMF(unfold_0)
       _, diag_1, _, _ = VBMF.EVBMF(unfold_1)
       ranks = [diag_0.shape[0], diag_1.shape[1]]
  
     if method == 'SVD':
+      
       U, S, V = torch.svd(torch.tensor(unfold_0))
       U1, S1, V1 = torch.svd(torch.tensor(unfold_1))
       rank0 = (S > threshold).sum().item()
       rank1 = (S1 >threshold).sum().item()
-      # min_rank = max(torch.tensor(unfold_0).shape[0]//10,torch.tensor(unfold_1).shape[0]//10)
-      # while (rank0<min_rank) or (rank1<min_rank):
-      #   threshold-=0.05
-      #   rank0 = (S > threshold).sum().item()
-      #   rank1 = (S1 > threshold).sum().item()
-      # print("Threshold = ", threshold)
+
       ranks = [rank0, rank1]
 
     if method == 'QR':
@@ -184,28 +183,86 @@ def estimate_ranks(layer, method,threshold):
 
     return ranks
 
+def estimate_threshold(layer):
 
-def tucker_decomposition_conv_layer(layer, method):
+    weights = layer.weight.data
+
+    unfold_0 = tl.base.unfold(np.asarray(weights), 0) 
+    unfold_1 = tl.base.unfold(np.asarray(weights), 1)
+ 
+    U, S, V = torch.svd(torch.tensor(unfold_0))
+    U1, S1, V1 = torch.svd(torch.tensor(unfold_1))
+    # channel = max(layer.in_channels,layer.out_channels)/50
+    # threshold = max(torch.quantile(S, 0.97), torch.quantile(S, 0.97))
+    # step_size = min(torch.std(S), torch.std(S1))
+    # IQR = (torch.quantile(S, 0.75)-torch.quantile(S, 0.25))
+    # IQR1 = (torch.quantile(S1, 0.75)-torch.quantile(S1, 0.25))
+    # step_size = min(IQR,IQR1)
+    # channel = max(layer.in_channels,layer.out_channels)
+
+    # return threshold-0.00000001, step_size*(1/channel)
+
+    return S
+
+def tucker_decomposition_conv_layer(layer, method, target_ratio_):
     """ Gets a conv layer, 
         returns a nn.Sequential object with the Tucker decomposition.
 
     """
-    threshold = 0.5
-    ratio = 0 
-    step_size = 0.025
-    while(ratio<0.8):
-      ranks = estimate_ranks(layer, method, threshold)
-      while ranks[0]<1 or ranks[1]<1:
-        ranks = estimate_ranks(layer, method, threshold)
-        threshold -= step_size
+    if method =='SVD':
+      ratio = 0 
+      target_ratio = target_ratio_
+      # threshold, step_size = estimate_threshold(layer)
+      #print("=== ", threshold, step_size)
+      # while(ratio<target_ratio):
+        
+      #   ranks = estimate_ranks(layer, method, threshold=threshold)
+      #   while ranks[0]<1 or ranks[1]<1:
+      #     ranks = estimate_ranks(layer, method, threshold)
+      #     threshold -= step_size
+      #   core, [last, first] = \
+      #       partial_tucker(np.asarray(layer.weight.data), \
+      #           modes=[0, 1], rank=ranks, init='svd')[0]
+      #   core, last, first = torch.tensor(core),torch.tensor(last),torch.tensor(first)
+      #   appro = tl.tucker_tensor.tucker_to_tensor(partial_tucker(np.asarray(layer.weight.data),\
+      #           modes=[0, 1], rank=ranks, init='svd')[0])
+      #   ratio = tl.norm(appro)/tl.norm(np.asarray(layer.weight.data))
+      #   # if target_ratio - ratio < 0.1: possible adaptive way 
+      #   #   step_size /= 5
+      #   # print("===" ,threshold, ratio)
+      #   threshold -= step_size
+
+      S = estimate_threshold(layer)
+      left, right = 0, len(S) - 1
+      while left <= right:
+        mid = (left + right) // 2
+        
+        ranks = estimate_ranks(layer, method, threshold=S[mid])
+        core, [last, first] = \
+            partial_tucker(np.asarray(layer.weight.data), \
+                modes=[0, 1], rank=ranks, init='svd')[0]
+        core, last, first = torch.tensor(core),torch.tensor(last),torch.tensor(first)
+        appro = tl.tucker_tensor.tucker_to_tensor(partial_tucker(np.asarray(layer.weight.data),\
+                modes=[0, 1], rank=ranks, init='svd')[0])
+        ratio = tl.norm(appro)/tl.norm(np.asarray(layer.weight.data))
+
+        if abs(target_ratio - ratio) < 0.02:
+
+          break
+        elif ratio < target_ratio:
+          left = mid + 1
+        else:
+          right = mid - 1
+
+    else:
+      ranks = estimate_ranks(layer, method,threshold = 0.8)
       core, [last, first] = \
-          partial_tucker(np.asarray(layer.weight.data), \
+              partial_tucker(np.asarray(layer.weight.data), \
               modes=[0, 1], rank=ranks, init='svd')[0]
       core, last, first = torch.tensor(core),torch.tensor(last),torch.tensor(first)
       appro = tl.tucker_tensor.tucker_to_tensor(partial_tucker(np.asarray(layer.weight.data),\
               modes=[0, 1], rank=ranks, init='svd')[0])
       ratio = tl.norm(appro)/tl.norm(np.asarray(layer.weight.data))
-      threshold -= step_size
 
     print(method+" Estimated ranks: ", ranks)
     # A pointwise convolution that reduces the channels from S to R3
