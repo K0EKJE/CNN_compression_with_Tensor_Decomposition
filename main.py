@@ -301,7 +301,6 @@ if __name__ == '__main__':
             test(epoch, decompose = True)
             scheduler.step()
       else:
-        #check_folder('checkpoint_decomp')
 
         for epoch in range(1, fine_tune_epochs+1):
             train(epoch, decompose = True)
