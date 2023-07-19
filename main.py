@@ -188,7 +188,7 @@ if __name__ == '__main__':
   if args.train:
 
     # this will create a checkpoint folder and ckpt.pth file to store state dict
-    for epoch in range(start_epoch, start_epoch+200):
+    for epoch in range(start_epoch, start_epoch+240):
         train(epoch)
         test(epoch)
         scheduler.step()
