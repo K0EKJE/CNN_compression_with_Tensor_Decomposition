@@ -127,12 +127,22 @@ def format_time(seconds):
         f = '0ms'
     return f
 
-
+def check_folder(folder_path):
+    '''
+    Clear folder if exists, create if not.
+    '''
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+    if os.path.exists(folder_path):
+        files = os.listdir(folder_path)
+        if len(files)>0:
+          # Iterate over the files and remove them
+            for file_name in files: os.remove(os.path.join(folder_path, file_name))
 
 
 
 def load_model(model,weight_path):
-    
+
     checkpoint = torch.load(weight_path)
 
     new_odict = collections.OrderedDict()
@@ -140,6 +150,5 @@ def load_model(model,weight_path):
     for key, value in checkpoint['net'].items():
         new_key = key.replace("module.", "")
         new_odict[new_key] = value
-    
+
     model.load_state_dict(new_odict)
-    

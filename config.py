@@ -1,8 +1,9 @@
 
 from models import *
-model = VGG('VGG19')
+#model = VGG('VGG19')
+model = AlexNet()
 # Params for training
-learning_rate = 0.001
+learning_rate = 0.01
 target_ratio_ = 0.79
 
 new_weight_path = "/content/CNN_compression_with_Tensor_Decomposition/trained_weights/VGG19_240iter_ckpt.pth"

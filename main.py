@@ -46,7 +46,7 @@ scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
 
 history = {}
 # Training
-def train(epoch, decompose = False, resume = False):
+def train(epoch, decompose = False):
     print('\nEpoch: %d' % epoch)
     net.train()
     train_loss = 0
@@ -54,8 +54,15 @@ def train(epoch, decompose = False, resume = False):
     total = 0
 
     folder_path = 'checkpoint'
+    if not os.path.exists(folder_path):
+      # Create the checkpoint folder
+      os.makedirs(folder_path)
+
     if decompose:
       folder_path = 'checkpoint_decomp'
+      if not os.path.exists(folder_path):
+        # Create the checkpoint folder
+        os.makedirs(folder_path)
 
     for batch_idx, (inputs, targets) in enumerate(trainloader):
         inputs, targets = inputs.cuda(), targets.cuda()
@@ -73,36 +80,37 @@ def train(epoch, decompose = False, resume = False):
         step_time, tot_time = progress_bar(batch_idx, len(trainloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
                      % (train_loss/(batch_idx+1), 100.*correct/total, correct, total))
 
-    if not resume: # delete the checkpoint before running an another instance of decomposition
-      check_folder(folder_path)
-      state = {}
-      train_history = {}
-      train_history['loss'] = []
-      train_history['step time'] = []
-      train_history['tot time'] = []
-      train_history['acc'] = []
-      test_history = {}
-      test_history['loss'] = []
-      test_history['step time'] = []
-      test_history['tot time'] = []
-      test_history['acc'] = []
 
-      train_history['loss'].append(train_loss/(batch_idx+1))
-      train_history['step time'].append(step_time)
-      train_history['tot time'].append(tot_time)
-      train_history['acc'].append(100.*correct/total)
+    if not os.path.exists(folder_path+'/ckpt.pth'):
 
-      state['train_history'] = train_history
-      state['test_history'] = test_history
-      torch.save(state, folder_path+'/ckpt.pth')
+        state = {}
+        train_history = {}
+        train_history['loss'] = []
+        train_history['step time'] = []
+        train_history['tot time'] = []
+        train_history['acc'] = []
+        test_history = {}
+        test_history['loss'] = []
+        test_history['step time'] = []
+        test_history['tot time'] = []
+        test_history['acc'] = []
+
+        train_history['loss'].append(train_loss/(batch_idx+1))
+        train_history['step time'].append(step_time)
+        train_history['tot time'].append(tot_time)
+        train_history['acc'].append(100.*correct/total)
+
+        state['train_history'] = train_history
+        state['test_history'] = test_history
+        torch.save(state, folder_path+'/ckpt.pth')
     else:
 
-      state = torch.load(folder_path+'/ckpt.pth') # for training to resume
-      state['train_history']['loss'].append(train_loss/(batch_idx+1))
-      state['train_history']['step time'].append(step_time)
-      state['train_history']['tot time'].append(tot_time)
-      state['train_history']['acc'].append(100.*correct/total)
-      torch.save(state, folder_path+'/ckpt.pth')
+        state = torch.load(folder_path+'/ckpt.pth') # for training to resume
+        state['train_history']['loss'].append(train_loss/(batch_idx+1))
+        state['train_history']['step time'].append(step_time)
+        state['train_history']['tot time'].append(tot_time)
+        state['train_history']['acc'].append(100.*correct/total)
+        torch.save(state, folder_path+'/ckpt.pth')
 
 def test1(epoch): # used to test accuracy without fine tuning
     '''
@@ -157,6 +165,7 @@ def test(epoch, decompose = False):
     state['test_history']['step time'].append(step_time)
     state['test_history']['tot time'].append(tot_time)
     state['test_history']['acc'].append(100.*correct/total)
+    state['epoch'] = len(state['test_history']['loss'])
     torch.save(state, folder_path+'/ckpt.pth')
 
     # Save checkpoint.
@@ -165,7 +174,6 @@ def test(epoch, decompose = False):
         print('Saving..')
         state['net'] = net.state_dict()
         state['best_acc'] = acc
-        state['epoch'] = epoch
 
         torch.save(state, folder_path+'/ckpt.pth')
         best_acc = acc
@@ -178,6 +186,7 @@ if os.path.isdir('checkpoint'):
 if __name__ == '__main__':
 
   if args.train:
+
     # this will create a checkpoint folder and ckpt.pth file to store state dict
     for epoch in range(start_epoch, start_epoch+200):
         train(epoch)
@@ -191,7 +200,7 @@ if __name__ == '__main__':
     checkpoint = torch.load('./checkpoint/ckpt.pth')
     net.load_state_dict(checkpoint['net'])
     best_acc = checkpoint['best_acc']
-    start_epoch = checkpoint['epoch']
+    start_epoch = checkpoint['epoch']+1
     for epoch in range(start_epoch, start_epoch+200):
         train(epoch)
         test(epoch)
