@@ -1,12 +1,12 @@
 
 from models import *
 #model = VGG('VGG19')
-model = AlexNet()
+model = resnet20()
 # Params for training
 learning_rate = 0.01
 target_ratio_ = 0.79
-
-new_weight_path = "/content/CNN_compression_with_Tensor_Decomposition/trained_weights/VGG19_240iter_ckpt.pth"
+new_weight_path = ''
+# new_weight_path = "/content/CNN_compression_with_Tensor_Decomposition/trained_weights/VGG19_240iter_ckpt.pth"
 # new_weight_path = "/content/checkpoint/ckpt.pth"
 layer_to_decomp = ['all']#'all'
 #[3,7,10] # list determining layers to decompose
