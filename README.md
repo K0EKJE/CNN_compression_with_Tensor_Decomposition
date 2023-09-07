@@ -23,7 +23,7 @@ The purpose of Tucker Decomposition is to approximate a higher-order tensor as a
 
 The mechanism behind the compression of CNN using tensor methods is straightforward. Based on the definition,  a convolutional layer can be regarded as a linear mapping with a forth-order kernel. We can apply a partial Tucker decomposition to the kernel to get a core tensor and a series of factor matrices. Substituting the layer with new layers using the core tensor and factor matrices as kernels will define a sequence of linear mapping. This sequence of linear mapping will accomplish the same computation as before.
 
-<img src="graphs/Tucker2decomp.png" style="width:800px;height:420px;">
+<img src="graphs/Tucker2decomp.png" style="width:800px;height:500px;">
 
 Decomposition rank is a key parameter. It governs the size of the tensor core after decompisition. In this implementation, approximation ratio, the ratio between Frobenius norms of the tensor recovered from factor matrices and core, and the original tensor, is introduced as an addition parameter for the choice of decomposition rank.
 
