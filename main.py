@@ -232,66 +232,66 @@ if __name__ == '__main__':
       #if args.tucker:
       count = 0
       count_d = 0
-      for i, key in enumerate(net._modules.keys()):
-          if layer_to_decomp != ['all']:
-            if i not in layer_to_decomp:# control which layer to decompose
-              continue
-          if i in [4]: 
-            for i, key1 in enumerate(net._modules[key]._modules.keys()):
-                for i, key2 in enumerate(net._modules[key]._modules[key1]._modules.keys()):
-                  if i in [0,2]:
-                    conv_layer = net._modules[key]._modules[key1]._modules[key2]
-                    if args.tucker:
-
-                            nparam, npd,ratio, decomposed = tucker_decomposition_conv_layer(conv_layer, tucker_rank_selection_method, target_ratio_)
-                            count+=nparam
-                            count_d+=npd
-                            print("Number of params before: "+str(nparam)+" || after: "+str(npd))
-                    net._modules[key]._modules[key1]._modules[key2] = decomposed
-      # for i, key in enumerate(net.features._modules.keys()):
-      #     if i >= N - 2:
-      #         break
-      #     if i == 0: continue #ignore first input convolution layer
-      #     if layer_to_decomp != 'all':
+      # for i, key in enumerate(net._modules.keys()):
+      #     if layer_to_decomp != ['all']:
       #       if i not in layer_to_decomp:# control which layer to decompose
       #         continue
-      #     # net.features._modules
+      #     if i in [4]:
+      #       for i, key1 in enumerate(net._modules[key]._modules.keys()):
+      #           for i, key2 in enumerate(net._modules[key]._modules[key1]._modules.keys()):
+      #             if i in [0,2]:
+      #               conv_layer = net._modules[key]._modules[key1]._modules[key2]
+      #               if args.tucker:
+      #
+      #                       nparam, npd,ratio, decomposed = tucker_decomposition_conv_layer(conv_layer, tucker_rank_selection_method, target_ratio_)
+      #                       count+=nparam
+      #                       count_d+=npd
+      #                       print("Number of params before: "+str(nparam)+" || after: "+str(npd))
+      #               net._modules[key]._modules[key1]._modules[key2] = decomposed
+      for i, key in enumerate(net.features._modules.keys()):
+          if i >= N - 2:
+              break
+          if i == 0: continue #ignore first input convolution layer
+          if layer_to_decomp != 'all':
+            if i not in layer_to_decomp:# control which layer to decompose
+              continue
+          # net.features._modules
 
-      #     if isinstance(net.features._modules[key], torch.nn.modules.conv.Conv2d):
+          if isinstance(net.features._modules[key], torch.nn.modules.conv.Conv2d):
 
-      #         conv_layer = net.features._modules[key]
-
-
-      #         print("Decomposing layer " +str(i)+": " +str(net.features._modules[key]))
-
-      #         if args.tucker:
-      #           nparam, npd,ratio, decomposed = tucker_decomposition_conv_layer(conv_layer, tucker_rank_selection_method, target_ratio_)
-      #           count+=nparam
-      #           count_d+=npd
-      #           print("Number of params before: "+str(nparam)+" || after: "+str(npd))
-
-      #         else:
-      #           if rank == 'auto':
-      #             rank_ = max(conv_layer.weight.data.numpy().shape)//3
-      #           elif rank == 'full':
-      #             rank_ = max(conv_layer.weight.data.numpy().shape)
-      #           else:
-      #             rank_ = rank[count]
-      #             count+=1
-      #           print("CP rank = "+ str(rank_))
-      #           # rank = max(conv_layer.weight.data.numpy().shape)//3
-      #           ratio, decomposed = cp_decomposition_conv_layer(conv_layer, rank_, res)
+              conv_layer = net.features._modules[key]
 
 
-      #         net.features._modules[key] = decomposed
-      #         # torch.save(net.state_dict(), './model_data/decomp_weight.pth')
+              print("Decomposing layer " +str(i)+": " +str(net.features._modules[key]))
 
-      #         print("Decomposition of layer "+str(i)+" Completed. Ratio = " + str(ratio))
-      #         print(''*100)
+              if args.tucker:
+                nparam, npd,ratio, decomposed = tucker_decomposition_conv_layer(conv_layer, tucker_rank_selection_method, target_ratio_)
+                count+=nparam
+                count_d+=npd
+                print("Number of params before: "+str(nparam)+" || after: "+str(npd))
 
-      #torch.save(net, model_path)
-      #if args.tucker:
-        #if count>0: print("Total param reduction: "+str(count)+" ==> "+str(count_d)+"(X"+str(round(count/count_d,2))+")")
+              else:
+                if rank == 'auto':
+                  rank_ = max(conv_layer.weight.data.numpy().shape)//3
+                elif rank == 'full':
+                  rank_ = max(conv_layer.weight.data.numpy().shape)
+                else:
+                  rank_ = rank[count]
+                  count+=1
+                print("CP rank = "+ str(rank_))
+                # rank = max(conv_layer.weight.data.numpy().shape)//3
+                ratio, decomposed = cp_decomposition_conv_layer(conv_layer, rank_, res)
+
+
+              net.features._modules[key] = decomposed
+              # torch.save(net.state_dict(), './model_data/decomp_weight.pth')
+
+              print("Decomposition of layer "+str(i)+" Completed. Ratio = " + str(ratio))
+              print(''*100)
+
+      torch.save(net, model_path)
+      if args.tucker:
+        if count>0: print("Total param reduction: "+str(count)+" ==> "+str(count_d)+"(X"+str(round(count/count_d,2))+")")
 
       print('='*100)
       print(''*100)
