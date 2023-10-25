@@ -24,10 +24,6 @@ The implementation is mainly completed with [PyTorch](http://pytorch.org/) and [
 
 The purpose of Tucker Decomposition is to approximate a higher-order tensor as a product of a series of lower-dimensional factor matrices and a core tensor. It is based on the idea of mode-n product. Partial Tucker decomposition is an important variant of the Tucker decomposition. It decomposes a tensor into a core tensor multiplied by factor matrices along a subset of its modes.
 
-<p align="center">
-  <img src="https://latex.codecogs.com/svg.image?\mathcal{Y}\approx\mathcal{G}\times_1&space;U^{\left(1\right)}\times_2&space;U^{\left(2\right)}\times_3&space;U^{\left(3\right)}\times\dots\times_N&space;U^{\left(N\right)}">
-</p>
-
 <img src="graphs/Tucker.png" style="width:800px;height:320px;">
 
 The mechanism behind the compression of CNN using tensor methods is straightforward. Based on the definition,  a convolutional layer can be regarded as a linear mapping with a forth-order kernel. We can apply a partial Tucker decomposition to the kernel to get a core tensor and a series of factor matrices. Substituting the layer with new layers using the core tensor and factor matrices as kernels will define a sequence of linear mapping. This sequence of linear mapping will accomplish the same computation as before.
@@ -142,3 +138,4 @@ Whole Network compression
 [7] [Tensor-Train Decomposition](https://epubs.siam.org/doi/10.1137/090752286)
 
 [8] [Tensor Decompositions and Applications](http://www.kolda.net/publication/TensorReview.pdf)
+
