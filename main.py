@@ -248,6 +248,7 @@ if __name__ == '__main__':
       #                       count_d+=npd
       #                       print("Number of params before: "+str(nparam)+" || after: "+str(npd))
       #               net._modules[key]._modules[key1]._modules[key2] = decomposed
+      N = len(net.features._modules.keys())
       for i, key in enumerate(net.features._modules.keys()):
           if i >= N - 2:
               break
