@@ -13,6 +13,9 @@
 6. [Result](#Result)
 7. [References](#References)
 
+---
+
+
 ### Introduction
 
 Applications of machine learning problems involving Deep Convolutional Neural Networks (DCNN) face challenges pertained to memory requirements and inference time, which hinder the deployment of networks in resource-constrained environments like mobile devices or embedded systems. To overcome these challenges, I propose to apply the methodology of tensor decomposition to a DCNN in this research project. Mainly, I proposed a new rank selection method based on singular value thresholding for partial Tucker decomposition of the convolutional kernels, which are modeled in our work as 4th-order tensors. Doing so provides a flexible way to address the trade-off between the model complexity and the predictions’ accuracy for an image classification task, for instance. I introduced a new hyper-parameter as an approximation ratio between the tensor norms of the original kernel and the reconstructed tensor after decomposition. The results demonstrate an excellent correlation between the hyperparameter and the accuracy of the network. Also, after decomposition, I fine-tuned the whole network toward standard backpropagation methods, and the decomposed model shows a large accuracy boost. 
@@ -40,6 +43,7 @@ Decomposition rank is a key parameter. It governs the size of the tensor core af
 - Evaluated on VGG19, the method shows promising reduction in parameter size at the cost of trivial accuracy loss; and at the same level of compression, the proposed method shows a higher accuracy as compared with the one-shot decomposition method using VBMF.
 - The accuracy of decomposed model recovers fast after one epoch of fine tuning.
 
+---
 
 ### Prerequisites
 - Python
