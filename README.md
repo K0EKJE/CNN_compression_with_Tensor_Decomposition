@@ -38,8 +38,8 @@ Decomposition rank is a key parameter. It governs the size of the tensor core af
 
 ### Prerequisites
 - Python
-- PyTorch
-- Tensorly
+- PyTorch 2.1.0+cu118
+- Tensorly 0.8.1
 
 ### Implementation
 
