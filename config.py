@@ -10,17 +10,18 @@ target_ratio_ = 0.79
 new_weight_path = "/content/CNN_compression_with_Tensor_Decomposition/trained_weights/VGG19_240iter_ckpt.pth"
 
 # For Tucker decomposition, either input 'all' or a subset list from [3,7,10,14,17,20,23,27] to determine layers to decompose
-layer_to_decomp = 'all'
+layer_to_decomp_tucker = 'all'
 # rank selection method for Tucker, choose from VBMF and SVD
-tucker_rank_selection_method = 'VBMF' # 'SVD'
+tucker_rank_selection_method = 'SVD'
 
-# Rank chosen from 'auto', "full" or desired number for CP
-rank = [3]
+# Rank chosen from 'auto', 'full' or desired number for CP; has to match the length of layer_to_decomp if input with list
+layer_to_decomp_cp = [3]
+rank = 'auto'
 
 # whether to add residual structure to the decomposed model; oroginally designed to account for
 # possible gradient problem, but proven to be not successful.
 res = False
-fine_tune_epochs = 15 #
+fine_tune_epochs = 3 #
 
 # used pretrained model to test accuracy
 model_path = "/content/decomposed_model"

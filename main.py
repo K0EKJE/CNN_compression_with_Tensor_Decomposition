@@ -2,7 +2,6 @@
 
 # Import necessary packages
 import tensorly as tl
-import tensorly
 
 import torch
 import torch.nn as nn
@@ -38,8 +37,6 @@ else:
 
 # Move the model to the GPU if 'cuda' is the selected device
 net = net.cuda()
-# Print the architecture of the neural network
-print(net)
 
 # If the device is 'cuda', enable cuDNN benchmarking for faster computation
 if device == 'cuda':
@@ -322,6 +319,11 @@ if __name__ == '__main__':
               break
 
           if i == 0: continue # Ignore the first input convolutional layer
+          # To avoid possible index issues
+          if args.tucker:
+              layer_to_decomp = layer_to_decomp_tucker
+          else: layer_to_decomp = layer_to_decomp_cp
+
           if layer_to_decomp != 'all':
             # Control which layers to decompose based on 'layer_to_decomp'
             if i not in layer_to_decomp:
