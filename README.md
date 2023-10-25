@@ -85,19 +85,38 @@ python main.py --run_model --fine_tune --lr = 0.00001
 ```
 Set ```fine_tune_epochs``` in ```config.py``` to control total epochs for fine tuning.
 
+---
+
 ### Result
-| Model             | Approximation Ratio | Compression    |Acc(No FT)|Acc(FT) | Param Size(M) |
+| Decomposition             | Approximation Ratio | Compression    |Acc(No FT)|Acc(FT) | Param Size(M) |
 | ----------------- | ------------     | ------- |-------   |--------| ----------|
-| VGG19             | 0.4              | x151.83   |10.00%    |63.20%      |0.13|
-| VGG19              | 0.6               |x41.17     |17.82%    |87.88%  |0.41|
-| VGG19              | 0.8               |x14.80       |84.12%    |91.91%  |1.35|
-| VGG19              | 0.9               |x3.09       |91.13%    |92.41%  |6.49|
-| VGG19              | 0.98              |x1.27      |92.85%    |92.91%  |15.74|
+|  Layer2       | 0.4              | x45.53   |17.21%    |90.32%      |0.13|
+|  Layer2       | 0.6               |x23.93     |57.96%    |91.92%  |0.41|
+|  Layer2       | 0.8               |x9.62      |88.35%    |92.55%  |1.35|
+|  Layer2       | 0.9               |x3.97       |92.03%    |92.99%  |6.49|
+|  Layer2       | 0.98              |x1.21      |93.15%    |93.15%  |15.74|
 
+<img src="graphs/RatioVsReduc_conv2.png" style="width:350px;height:300px;">
+<img src="graphs/RatioVsACC_conv2.png" style="width:350px;height:300px;">
+Decomposing Layer 2 only
 
+---
 
+| Decomposition             | Approximation Ratio | Compression    |Acc(No FT)|Acc(FT) | Param Size(M) |
+| ----------------- | ------------     | ------- |-------   |--------| ----------|
+| Whole Net             | 0.4              | x151.83   |10.00%    |63.20%      |0.13|
+| Whole Net               | 0.6               |x41.17     |17.82%    |87.88%  |0.41|
+| Whole Net               | 0.8               |x14.80       |84.12%    |91.91%  |1.35|
+| Whole Net               | 0.9               |x3.09       |91.13%    |92.41%  |6.49|
+| Whole Net               | 0.98              |x1.27      |92.85%    |92.91%  |15.74|
 
-### References
+<img src="graphs/ApproRatiovsReduction.png" style="width:350px;height:300px;">
+<img src="graphs/WholeNetworkACCvsError.png" style="width:350px;height:300px;">
+Whole Network compression
+
+---
+
+### Some References
 
 [1] https://github.com/kuangliu/pytorch-cifar
 
