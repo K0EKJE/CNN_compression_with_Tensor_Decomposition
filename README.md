@@ -1,5 +1,10 @@
 # Compress CNN With Tensor Decomposition
 
+**A demo notebook ->**
+<a target="_blank" href="https://colab.research.google.com/github/https://colab.research.google.com/github/K0EKJE/CNN_compression_with_Tensor_Decomposition/blob/main/CNN_compression_demo.ipynb">
+  <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
+</a>
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Takeaways](#Takeaways)
@@ -96,8 +101,19 @@ Set ```fine_tune_epochs``` in ```config.py``` to control total epochs for fine t
 |  Layer2       | 0.9               |x3.97       |92.03%    |92.99%  |6.49|
 |  Layer2       | 0.98              |x1.21      |93.15%    |93.15%  |15.74|
 
-<img src="graphs/RatioVsReduc_conv2.png" style="width:350px;height:300px;">
-<img src="graphs/RatioVsACC_conv2.png" style="width:350px;height:300px;">
+<img src="graphs/RatioVsReduc_conv2.png" style="width:400px;height:300px;">
+<img src="graphs/RatioVsACC_conv2.png" style="width:400px;height:300px;">
+
+<style>
+  .img {
+    display: inline-block;
+  }
+  img.mobile-image {
+	width: 49%;
+    display: inline-block;
+  }
+</style>
+
 Decomposing Layer 2 only
 
 ---
@@ -110,8 +126,19 @@ Decomposing Layer 2 only
 | Whole Net               | 0.9               |x3.09       |91.13%    |92.41%  |6.49|
 | Whole Net               | 0.98              |x1.27      |92.85%    |92.91%  |15.74|
 
-<img src="graphs/ApproRatiovsReduction.png" style="width:350px;height:300px;">
-<img src="graphs/WholeNetworkACCvsError.png" style="width:350px;height:300px;">
+<img src="graphs/ApproRatiovsReduction.png" style="width:400px;height:300px;">
+<img src="graphs/WholeNetworkACCvsError.png" style="width:400px;height:300px;">
+
+<style>
+  .img {
+    display: inline-block;
+  }
+  img.mobile-image {
+	width: 49%;
+    display: inline-block;
+  }
+</style>
+
 Whole Network compression
 
 ---
