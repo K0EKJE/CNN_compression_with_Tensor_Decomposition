@@ -1,6 +1,5 @@
 # Compress CNN With Tensor Decomposition
 
-**A demo notebook ->**
 <a target="_blank" href="https://colab.research.google.com/github/K0EKJE/CNN_compression_with_Tensor_Decomposition/blob/main/CNN_compression_demo.ipynb">
   <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
 </a>
@@ -15,14 +14,19 @@
 7. [References](#References)
 
 ### Introduction
-In this research project I developed a method to compress convolutional layers of a CNN model with Tensor Decomposition using [PyTorch](http://pytorch.org/) and [Tensorly](http://tensorly.org/). Intuitively, the proposed method substitutes each convolutional layer with three smaller layers with partial Tucker Decomposition, or CP decomposition. Singular value thresholding is utilized to select ranks for the partial Tucker Decomposition, where ranks control the trade-off between compression rate and model accuracy.
 
-The training is completely conducted on google colab using NVIDIA Tesla T4.
+Applications of machine learning problems involving Deep Convolutional Neural Networks (DCNN) face challenges pertained to memory requirements and inference time, which hinder the deployment of networks in resource-constrained environments like mobile devices or embedded systems. To overcome these challenges, I propose to apply the methodology of tensor decomposition to a DCNN in this research project. Mainly, I proposed a new rank selection method based on singular value thresholding for partial Tucker decomposition of the convolutional kernels, which are modeled in our work as 4th-order tensors. Doing so provides a flexible way to address the trade-off between the model complexity and the predictions’ accuracy for an image classification task, for instance. I introduced a new hyper-parameter as an approximation ratio between the tensor norms of the original kernel and the reconstructed tensor after decomposition. The results demonstrate an excellent correlation between the hyperparameter and the accuracy of the network. Also, after decomposition, I fine-tuned the whole network toward standard backpropagation methods, and the decomposed model shows a large accuracy boost. 
+
+The implementation is mainly completed with [PyTorch](http://pytorch.org/) and [Tensorly](http://tensorly.org/). Intuitively, the proposed method substitutes each convolutional layer with three smaller layers with partial Tucker Decomposition, or CP decomposition. Singular value thresholding is utilized to select ranks for the partial Tucker Decomposition, where ranks control the trade-off between compression rate and model accuracy.
 
 ### Theory
 #### Tucker Decomposition
 
 The purpose of Tucker Decomposition is to approximate a higher-order tensor as a product of a series of lower-dimensional factor matrices and a core tensor. It is based on the idea of mode-n product. Partial Tucker decomposition is an important variant of the Tucker decomposition. It decomposes a tensor into a core tensor multiplied by factor matrices along a subset of its modes.
+
+<p align="center">
+  <img src="https://latex.codecogs.com/svg.image?\mathcal{Y}\approx\mathcal{G}\times_1&space;U^{\left(1\right)}\times_2&space;U^{\left(2\right)}\times_3&space;U^{\left(3\right)}\times\dots\times_N&space;U^{\left(N\right)}">
+</p>
 
 <img src="graphs/Tucker.png" style="width:800px;height:320px;">
 
