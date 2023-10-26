@@ -14,7 +14,7 @@
   - [Tucker Decomposition](##Tucker-Decomposition)
   - [Compression](##Compression)
   - [Rank Selection](##Rank-Selection)
-- [References](#References)
+- [References](#Some-References)
 
 ## Introduction
 
