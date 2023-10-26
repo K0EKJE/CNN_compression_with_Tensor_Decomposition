@@ -11,9 +11,9 @@
 - [Implementation](#Prerequisites)
 - [Results](#Result)
 - [Math Theory](#Take-a-Brief-Look-at-the-Math-Theories)
-  - [Tucker Decomposition](####Tucker-Decomposition)
-  - [Compression](####Compression)
-  - [Rank Selection](####Rank-Selection)
+  - [Tucker Decomposition](##Tucker-Decomposition)
+  - [Compression](##Compression)
+  - [Rank Selection](##Rank-Selection)
 - [References](#References)
 
 ## Introduction
@@ -98,7 +98,6 @@ Set ```fine_tune_epochs``` in ```config.py``` to control total epochs for fine t
 
 Decomposing Layer 2 only
 
----
 
 | Decomposition             | Approximation Ratio | Compression    |Acc(No FT)|Acc(FT) | Param Size(M) |
 | ----------------- | ------------     | ------- |-------   |--------| ----------|
@@ -111,6 +110,8 @@ Decomposing Layer 2 only
 <img src="graphs/ApproRatiovsReduction.png" style="width:500px;height:400px;"><img src="graphs/WholeNetworkACCvsError.png" style="width:500px;height:400px;">
 
 Whole Network compression
+
+---
 
 ## Take a Brief Look at the Math Theories 
 For more detailed information about tensor decomposition, check [Tensor Decompositions and Applications](http://www.kolda.net/publication/TensorReview.pdf).
