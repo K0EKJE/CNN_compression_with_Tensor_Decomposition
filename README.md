@@ -11,9 +11,9 @@
 - [Implementation](#Prerequisites)
 - [Results](#Result)
 - [Math Theory](#Take-a-Brief-Look-at-the-Math-Theories)
-  - [Tucker Decomposition](##Tucker-Decomposition)
-  - [Compression](##Compression)
-  - [Rank Selection](##Rank-Selection)
+  - [Tucker Decomposition](####Tucker-Decomposition)
+  - [Compression](####Compression)
+  - [Rank Selection](####Rank-Selection)
 - [References](#References)
 
 ## Introduction
