@@ -85,6 +85,7 @@ Set ```fine_tune_epochs``` in ```config.py``` to control total epochs for fine t
 ---
 
 ## Result
+Decomposing Layer 2 only
 
 | Decomposition             | Approximation Ratio | Compression    |Acc(No FT)|Acc(FT) | Param Size(M) |
 | ----------------- | ------------     | ------- |-------   |--------| ----------|
@@ -96,9 +97,7 @@ Set ```fine_tune_epochs``` in ```config.py``` to control total epochs for fine t
 
 <img src="graphs/RatioVsReduc_conv2.png" style="width:500px;height:400px;"><img src="graphs/RatioVsACC_conv2.png" style="width:500px;height:400px;">
 
-Decomposing Layer 2 only
-
-
+Whole Network compression
 | Decomposition             | Approximation Ratio | Compression    |Acc(No FT)|Acc(FT) | Param Size(M) |
 | ----------------- | ------------     | ------- |-------   |--------| ----------|
 | Whole Net             | 0.4              | x151.83   |10.00%    |63.20%      |0.13|
@@ -108,8 +107,6 @@ Decomposing Layer 2 only
 | Whole Net               | 0.98              |x1.27      |92.85%    |92.91%  |15.74|
 
 <img src="graphs/ApproRatiovsReduction.png" style="width:500px;height:400px;"><img src="graphs/WholeNetworkACCvsError.png" style="width:500px;height:400px;">
-
-Whole Network compression
 
 ---
 
